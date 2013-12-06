@@ -20,41 +20,44 @@ class GraphSpec extends FlatSpec with ShouldMatchers {
   }
 
   "Graph" should "be properly built" in {
-    graph.getEdges(0) should be(List(Edge(3, 0.0), Edge(2, 0.0), Edge(1, 0.0)))
-    graph.getEdges(1) should be(List(Edge(4, 0.0), Edge(3, 0.0), Edge(0, 0.0)))
-    graph.getEdges(2) should be(List(Edge(6, 0.0), Edge(3, 0.0), Edge(0, 0.0)))
-    graph.getEdges(3) should be(List(Edge(6, 0.0), Edge(5, 0.0), Edge(4, 0.0), Edge(2, 0.0), Edge(1, 0.0), Edge(0, 0.0)))
-    graph.getEdges(4) should be(List(Edge(3, 0.0), Edge(1, 0.0)))
-    graph.getEdges(5) should be(List(Edge(6, 0.0), Edge(3, 0.0)))
-    graph.getEdges(6) should be(List(Edge(7, 0.0), Edge(5, 0.0), Edge(3, 0.0), Edge(2, 0.0)))
-    graph.getEdges(7) should be(List(Edge(10, 0.0), Edge(9, 0.0), Edge(8, 0.0), Edge(6, 0.0)))
-    graph.getEdges(8) should be(List(Edge(9, 0.0), Edge(7, 0.0)))
-    graph.getEdges(9) should be(List(Edge(12, 0.0), Edge(11, 0.0), Edge(8, 0.0), Edge(7, 0.0)))
-    graph.getEdges(10) should be(List(Edge(12, 0.0), Edge(11, 0.0), Edge(7, 0.0)))
-    graph.getEdges(11) should be(List(Edge(10, 0.0), Edge(9, 0.0)))
-    graph.getEdges(12) should be(List(Edge(10, 0.0), Edge(9, 0.0)))
+    graph.getEdges(0)  should be(List(Neighbour(3,  0.0), Neighbour(2,  0.0), Neighbour(1, 0.0)))
+    graph.getEdges(1)  should be(List(Neighbour(4,  0.0), Neighbour(3,  0.0), Neighbour(0, 0.0)))
+    graph.getEdges(2)  should be(List(Neighbour(6,  0.0), Neighbour(3,  0.0), Neighbour(0, 0.0)))
+    graph.getEdges(3)  should be(List(Neighbour(6,  0.0), Neighbour(5,  0.0), Neighbour(4, 0.0), Neighbour(2, 0.0), Neighbour(1, 0.0), Neighbour(0, 0.0)))
+    graph.getEdges(4)  should be(List(Neighbour(3,  0.0), Neighbour(1,  0.0)))
+    graph.getEdges(5)  should be(List(Neighbour(6,  0.0), Neighbour(3,  0.0)))
+    graph.getEdges(6)  should be(List(Neighbour(7,  0.0), Neighbour(5,  0.0), Neighbour(3, 0.0), Neighbour(2, 0.0)))
+    graph.getEdges(7)  should be(List(Neighbour(10, 0.0), Neighbour(9,  0.0), Neighbour(8, 0.0), Neighbour(6, 0.0)))
+    graph.getEdges(8)  should be(List(Neighbour(9,  0.0), Neighbour(7,  0.0)))
+    graph.getEdges(9)  should be(List(Neighbour(12, 0.0), Neighbour(11, 0.0), Neighbour(8, 0.0), Neighbour(7, 0.0)))
+    graph.getEdges(10) should be(List(Neighbour(12, 0.0), Neighbour(11, 0.0), Neighbour(7, 0.0)))
+    graph.getEdges(11) should be(List(Neighbour(10, 0.0), Neighbour(9,  0.0)))
+    graph.getEdges(12) should be(List(Neighbour(10, 0.0), Neighbour(9,  0.0)))
   }
 
   "Graph" should "have valid shortest path values" in {
     val distance    = new Array[Int](numVertices)
     val weights     = new Array[Int](numVertices)
     val arrivedFrom = new Array[Int](numVertices)
-    distance(0) = 0
-    weights(0)  = 1
+    val shortPathNodeList = Array.fill[List[Int]](numVertices)(List[Int]())
 
-    graph.calcShortestPathTree(0, distance, weights, arrivedFrom)
+    distance(0)     = 0
+    weights(0)      = 1
 
-    distance(1) should be(1)
-    distance(2) should be(1)
-    distance(3) should be(1)
-    distance(4) should be(2)
-    distance(5) should be(2)
-    distance(6) should be(2)
-    distance(7) should be(3)
-    distance(8) should be(4)
-    distance(9) should be(4)
+    graph.calcShortestPathTree(0, distance, weights, arrivedFrom, shortPathNodeList)
+
+    distance(1)  should be(1)
+    distance(2)  should be(1)
+    distance(3)  should be(1)
+    distance(4)  should be(2)
+    distance(5)  should be(2)
+    distance(6)  should be(2)
+    distance(7)  should be(3)
+    distance(8)  should be(4)
+    distance(9)  should be(4)
     distance(10) should be(4)
     distance(11) should be(5)
     distance(12) should be(5)
   }
+
 }

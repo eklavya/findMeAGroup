@@ -32,10 +32,12 @@ b)calculate edge betweenness contribution from this set of paths
 
  */
 
-case class Edge(to: Int, var betweenness: Double)
+case class Neighbour(node: Int, var betweenness: Double)
+
 
 class Graph(numVertices: Int) {
-  private[this] val graph = Array.fill[List[Edge]](numVertices)(Nil)
+
+  private[this] val graph = Array.fill[List[Neighbour]](numVertices)(List[Neighbour]())
 
   val edges = collection.mutable.Map.empty[Int, Int]
 
@@ -44,12 +46,20 @@ class Graph(numVertices: Int) {
   def getEdges(v: Int) = graph(v)
 
   def addEdge(v1: Int, v2: Int) {
-    graph(v1) = Edge(v2, 0.0) :: graph(v1)//Edge(v2, 0.0) :: graph(v1)
+    graph(v1) = Neighbour(v2, 0.0) :: graph(v1)//Edge(v2, 0.0) :: graph(v1)
     edges.getOrElseUpdate(v1, v2)
     edgeBetweenness.getOrElseUpdate(v1, 0.0)
   }
 
-  def calcShortestPathTree(source: Int, distance: Array[Int], weights: Array[Int], arrivedFrom: Array[Int]) {
+  /*
+  When we arrive from a node i at a node j which has already been visited and distance(i) + 1 == distance(j)
+   it means that i provides another shortest path to this node and we add it to a list shortestPathNodeList
+
+   Note: We can get away with just a listing of all the nodes which fall on any shortest path to a node
+         because we only need to know if they fall on a shortest path of any node to decide whether they are a leaf
+         or not, we do not use shortest paths for any other purpose.
+   */
+  def calcShortestPathTree(source: Int, distance: Array[Int], weights: Array[Int], arrivedFrom: Array[Int], shortestPathNodeList: Array[List[Int]]) {
     val bfsq        = mutable.Queue.empty[Int]
 
     @tailrec
@@ -58,51 +68,55 @@ class Graph(numVertices: Int) {
         val node = bfsq.dequeue
         val neighbours = graph(node)
         neighbours.foreach { n =>
-          if (distance(n.to) == 0) {
-            bfsq.enqueue(n.to)
-            arrivedFrom(n.to) = node
-            distance(n.to) = distance(node) + 1
-            weights(n.to)  = weights(node)
+          if (distance(n.node) == 0) {
+            bfsq.enqueue(n.node)
+            arrivedFrom(n.node) = node
+            shortestPathNodeList(n.node) = node :: shortestPathNodeList(n.node)
+            distance(n.node) = distance(node) + 1
+            weights(n.node)  = weights(node)
           }
-          else if (distance(n.to) < distance(node) + 1) ()
+          else if (distance(n.node) < distance(node) + 1) ()
           else {
+            shortestPathNodeList(n.node) = node :: shortestPathNodeList(n.node)
             weights(node) += weights(node)
           }
         }
         bfsTraverse
       }
     }
+
     bfsq.enqueue(source)
     bfsTraverse
   }
 
+  def calcLeaves(shortestPathNodeList: Array[List[Int]]) = {
+    val leaves = new ArrayBuffer[Int]
+    shortestPathNodeList.indices foreach { i =>
+      if (shortestPathNodeList.filter(_.contains(i)).isEmpty)
+        leaves += i
+    }
+    leaves
+  }
 
   def calcBetweenness {
     graph.zipWithIndex.foreach { case(el, s) =>
-      val distance    = new Array[Int](numVertices)
-      val weights     = new Array[Int](numVertices)
-      val arrivedFrom = new Array[Int](numVertices)
+      val distance             = new Array[Int](numVertices)
+      val weights              = new Array[Int](numVertices)
+      val arrivedFrom          = new Array[Int](numVertices)
+      val shortestPathNodeList = Array.fill[List[Int]](numVertices)(List[Int]())
+
       distance(s) = 0
       weights(s)  = 1
 
-      calcShortestPathTree(s, distance, weights, arrivedFrom)
       /*
       Find shortest path to all vertices from s
        */
-
-      /*
-      Make a shortest path tree
-       */
-      val shortestPathTree = new Array[List[Int]](numVertices)
-      arrivedFrom.zipWithIndex foreach { case (from, i) =>
-        shortestPathTree(i) = from :: shortestPathTree(i)
-      }
+      calcShortestPathTree(s, distance, weights, arrivedFrom, shortestPathNodeList)
 
       /*
       get leaves
        */
-      val leaves = new ArrayBuffer[Int]
-      shortestPathTree.zipWithIndex.foreach{case (nl, i) => if (nl.size == 1) leaves += i}
+      val leaves = calcLeaves(shortestPathNodeList)
 
       /*
       assign edge betweenness scores to all the edges comprising of the leaves
@@ -110,9 +124,7 @@ class Graph(numVertices: Int) {
       leaves foreach { leaf =>
         val nbrs = graph(leaf)
         nbrs foreach { n =>
-          n.betweenness = weights(n.to) / weights(leaf)
-          //        .map((leaf, _))
-          //        leafAndNbr foreach { case(leaf, v) => edgeBetweenness.get(v.to).map(_ = weights(v.to) / weights(leaf)).getOrElse(edgeBetweenness(leaf) = weights(v.to) / weights(leaf))
+          n.betweenness = weights(n.node) / weights(leaf)
         }
       }
 
@@ -123,10 +135,10 @@ class Graph(numVertices: Int) {
        */
       def addBetweenness(l: Int) {
         if (l != s) {
-          val target = graph(l).filterNot(e=> distance(e.to) > distance(l)).head
-          target.betweenness = (1.0 + graph(l).filter(e => distance(e.to) > distance(l)).foldRight(0.0)(_.betweenness + _)) *
-                               (weights(l) / weights(target.to))
-          addBetweenness(target.to)
+          val target = graph(l).filter(e => distance(e.node) < distance(l)).head
+          target.betweenness = (1.0 + graph(l).filter(e => distance(e.node) > distance(l)).foldRight(0.0)(_.betweenness + _)) *
+                               (weights(l) / weights(target.node))
+          addBetweenness(target.node)
         }
       }
 
@@ -136,7 +148,7 @@ class Graph(numVertices: Int) {
       leaves foreach { leaf =>
         val nbrs = graph(leaf)
         nbrs foreach { n =>
-          addBetweenness(n.to)
+          addBetweenness(n.node)
         }
       }
 

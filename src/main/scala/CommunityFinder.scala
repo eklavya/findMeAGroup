@@ -1,21 +1,22 @@
 object CommunityFinder extends App {
-  var inputEdges = Map.empty[String, String]
+  val inputEdges = io.Source.fromFile("/home/eklavya/IdeaProjects/findMeAGroup/src/test/resources/graph").getLines.toList
 
-  io.Source.fromFile("/home/eklavya/followersData.csv").getLines.toList.foreach{ s =>
-    val pairs = s.split(",")
-    val k = pairs(0)
-    val v = pairs(1)
-    inputEdges = inputEdges + (k -> v)
+  val numVertices = inputEdges.flatMap(_.split(",")).distinct.size
+
+  val graph = {
+    val graph = new Graph(numVertices)
+    inputEdges.map { el =>
+      val e = el.split(",")
+      (e(0).toInt, e(1).toInt)
+    } foreach(edge => graph.addEdge(edge._1, edge._2))
+    graph
   }
 
-  var temp = Set.empty[String]
+  graph.calcBetweenness
 
-  inputEdges.foreach {
-    case(k, v) =>
-      inputEdges.get(v).map( x => if (x == k)  temp += x)
+  for(i <- 0 to numVertices) {
+    graph.getEdges(i).foreach { n =>
+      println(s"Betweenness of edge $i, ${n.node} = ${n.betweenness}")
+    }
   }
-
-  inputEdges = inputEdges.filterNot{case(k, v) => temp(k)}
-
-  def vertexMapper(v: String) = v.hashCode
 }
