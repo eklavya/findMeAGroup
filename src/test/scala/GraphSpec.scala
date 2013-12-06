@@ -3,6 +3,7 @@
  */
 
 import org.scalatest.{ShouldMatchers, FlatSpec}
+import scala.collection.mutable.ArrayBuffer
 
 class GraphSpec extends FlatSpec with ShouldMatchers {
 
@@ -39,12 +40,11 @@ class GraphSpec extends FlatSpec with ShouldMatchers {
     val distance    = new Array[Int](numVertices)
     val weights     = new Array[Int](numVertices)
     val arrivedFrom = new Array[Int](numVertices)
-    val shortPathNodeList = Array.fill[List[Int]](numVertices)(List[Int]())
 
     distance(0)     = 0
     weights(0)      = 1
 
-    graph.calcShortestPathTree(0, distance, weights, arrivedFrom, shortPathNodeList)
+    graph.calcShortestPathTree(0, distance, weights, arrivedFrom)
 
     distance(1)  should be(1)
     distance(2)  should be(1)
@@ -58,6 +58,19 @@ class GraphSpec extends FlatSpec with ShouldMatchers {
     distance(10) should be(4)
     distance(11) should be(5)
     distance(12) should be(5)
+  }
+
+  "Graph" should "report valid leaves" in {
+    val distance    = new Array[Int](numVertices)
+    val weights     = new Array[Int](numVertices)
+    val arrivedFrom = new Array[Int](numVertices)
+
+    distance(0)     = 0
+    weights(0)      = 1
+
+    val shortestPathNodeList = graph.calcShortestPathTree(0, distance, weights, arrivedFrom)
+
+    graph.calcLeaves(shortestPathNodeList) should be(ArrayBuffer(4, 5, 8, 11, 12))
   }
 
 }

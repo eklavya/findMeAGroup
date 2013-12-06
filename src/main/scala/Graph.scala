@@ -59,8 +59,9 @@ class Graph(numVertices: Int) {
          because we only need to know if they fall on a shortest path of any node to decide whether they are a leaf
          or not, we do not use shortest paths for any other purpose.
    */
-  def calcShortestPathTree(source: Int, distance: Array[Int], weights: Array[Int], arrivedFrom: Array[Int], shortestPathNodeList: Array[List[Int]]) {
+  def calcShortestPathTree(source: Int, distance: Array[Int], weights: Array[Int], arrivedFrom: Array[Int]) = {
     val bfsq        = mutable.Queue.empty[Int]
+    val shortestPathNodeList = Array.fill[List[Int]](numVertices)(List[Int]())
 
     @tailrec
     def bfsTraverse {
@@ -87,7 +88,11 @@ class Graph(numVertices: Int) {
 
     bfsq.enqueue(source)
     bfsTraverse
+
+    shortestPathNodeList
   }
+
+
 
   def calcLeaves(shortestPathNodeList: Array[List[Int]]) = {
     val leaves = new ArrayBuffer[Int]
@@ -97,13 +102,11 @@ class Graph(numVertices: Int) {
     }
     leaves
   }
-
   def calcBetweenness {
     graph.zipWithIndex.foreach { case(el, s) =>
       val distance             = new Array[Int](numVertices)
       val weights              = new Array[Int](numVertices)
       val arrivedFrom          = new Array[Int](numVertices)
-      val shortestPathNodeList = Array.fill[List[Int]](numVertices)(List[Int]())
 
       distance(s) = 0
       weights(s)  = 1
@@ -111,7 +114,7 @@ class Graph(numVertices: Int) {
       /*
       Find shortest path to all vertices from s
        */
-      calcShortestPathTree(s, distance, weights, arrivedFrom, shortestPathNodeList)
+      val shortestPathNodeList = calcShortestPathTree(s, distance, weights, arrivedFrom)
 
       /*
       get leaves
