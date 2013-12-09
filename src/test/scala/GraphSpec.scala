@@ -37,7 +37,7 @@ class GraphSpec extends FlatSpec with ShouldMatchers {
   }
 
   "Graph" should "have valid shortest path values" in {
-    val distance    = new Array[Int](numVertices)
+    val distance    = Array.fill[Int](numVertices)(-1)
     val weights     = new Array[Int](numVertices)
     val arrivedFrom = new Array[Int](numVertices)
 
@@ -61,7 +61,7 @@ class GraphSpec extends FlatSpec with ShouldMatchers {
   }
 
   "Graph" should "report valid leaves" in {
-    val distance    = new Array[Int](numVertices)
+    val distance    = Array.fill[Int](numVertices)(-1)
     val weights     = new Array[Int](numVertices)
     val arrivedFrom = new Array[Int](numVertices)
 

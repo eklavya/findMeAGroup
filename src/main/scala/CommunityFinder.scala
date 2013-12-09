@@ -14,7 +14,7 @@ object CommunityFinder extends App {
 
   graph.calcBetweenness
 
-  for(i <- 0 to numVertices) {
+  for(i <- 0 until numVertices) {
     graph.getEdges(i).foreach { n =>
       println(s"Betweenness of edge $i, ${n.node} = ${n.betweenness}")
     }

@@ -69,7 +69,7 @@ class Graph(numVertices: Int) {
         val node = bfsq.dequeue
         val neighbours = graph(node)
         neighbours.foreach { n =>
-          if (distance(n.node) == 0) {
+          if (distance(n.node) == -1) {
             bfsq.enqueue(n.node)
             arrivedFrom(n.node) = node
             shortestPathNodeList(n.node) = node :: shortestPathNodeList(n.node)
@@ -104,7 +104,7 @@ class Graph(numVertices: Int) {
   }
   def calcBetweenness {
     graph.zipWithIndex.foreach { case(el, s) =>
-      val distance             = new Array[Int](numVertices)
+      val distance             = Array.fill[Int](numVertices)(-1)
       val weights              = new Array[Int](numVertices)
       val arrivedFrom          = new Array[Int](numVertices)
 
@@ -139,9 +139,11 @@ class Graph(numVertices: Int) {
       def addBetweenness(l: Int) {
         if (l != s) {
           val target = graph(l).filter(e => distance(e.node) < distance(l)).head
-          target.betweenness = (1.0 + graph(l).filter(e => distance(e.node) > distance(l)).foldRight(0.0)(_.betweenness + _)) *
-                               (weights(l) / weights(target.node))
-          addBetweenness(target.node)
+          if (target.node != s) {
+            target.betweenness = (1.0 + graph(l).filter(e => distance(e.node) > distance(l)).foldRight(0.0)(_.betweenness + _)) *
+              (weights(l) / weights(target.node))
+            addBetweenness(target.node)
+          }
         }
       }
 
