@@ -32,20 +32,34 @@ b)calculate edge betweenness contribution from this set of paths
 
  */
 
+
 case class Neighbour(node: Int, var betweenness: Double)
 
-class Graph(numVertices: Int) {
+class Graph(num: Int) extends Communities {
 
-  private[this] val graph = Array.fill[List[Neighbour]](numVertices)(List[Neighbour]())
+  override val numVertices = num
 
-  private[this] val acc = Array.fill[List[Neighbour]](numVertices)(List[Neighbour]())
+  override val graph = Array.fill[List[Neighbour]](numVertices)(List[Neighbour]())
+
+  override val acc = Array.fill[List[Neighbour]](numVertices)(List[Neighbour]())
+
+  override val communities = new Array[Int](numVertices)
 
   def getEdges(v: Int) = graph(v)
 
   def addEdge(v1: Int, v2: Int) {
     graph(v1) = Neighbour(v2, 0.0) :: graph(v1)//Edge(v2, 0.0) :: graph(v1)
     acc(v1) = Neighbour(v2, 0.0) :: acc(v1)
+    graph(v2) = Neighbour(v1, 0.0) :: graph(v2)//Edge(v2, 0.0) :: graph(v1)
+    acc(v2) = Neighbour(v1, 0.0) :: acc(v2)
   }
+
+  /*
+  Mark connected components or communities in the graph
+   */
+
+
+
 
   /*
   When we arrive from a node i at a node j which has already been visited and distance(i) + 1 == distance(j)
@@ -56,6 +70,7 @@ class Graph(numVertices: Int) {
          or not, we do not use shortest paths for any other purpose.
    */
   def calcShortestPathTree(source: Int, distance: Array[Int], weights: Array[Int], arrivedFrom: Array[Int]) = {
+
     val bfsq        = mutable.Queue.empty[Int]
     val shortestPathNodeList = Array.fill[List[Int]](numVertices)(List[Int]())
 
@@ -76,7 +91,7 @@ class Graph(numVertices: Int) {
           else if (distance(j) < distance(node) + 1) ()
           else if (distance(j) == distance(node) + 1) {
             shortestPathNodeList(j) = node :: shortestPathNodeList(j)
-            weights(n.node) += weights(node)
+            weights(j) += weights(node)
           }
         }
         bfsTraverse
@@ -91,20 +106,33 @@ class Graph(numVertices: Int) {
 
 
 
-  def calcLeaves(shortestPathNodeList: Array[List[Int]]) = {
+  def calcLeaves(shortestPathNodeList: Array[List[Int]], community: Int) = {
     val leaves = new ArrayBuffer[Int]
 
     shortestPathNodeList.indices foreach { i =>
-      if (shortestPathNodeList.filter(_.contains(i)).isEmpty)
+      if (shortestPathNodeList.filter(_.contains(i)).isEmpty && communities(i) == community)
         leaves += i
     }
 
     leaves
   }
 
-  def calcBetweenness = {
+  def sgn(d1: Double, d2: Double) = {
+    if (d1 - d2 < 0.000001 || d2 - d1 < 0.000001) 0
+    else if (d1 - d2 > 0.0) 1
+    else -1
+  }
 
-    (0 until numVertices) foreach { s =>
+  def calcBetweenness(nodes: Seq[Int]) = {
+
+    acc foreach (el => el foreach (n => n.betweenness = 0.0))
+    graph foreach (el => el foreach (n => n.betweenness = 0.0))
+    
+    var maxBetweenness: (Int, Neighbour) = (-1, Neighbour(0, 0.0))
+
+    var mean: Double = 0.1
+
+    nodes foreach { s =>
       val distance             = Array.fill[Int](numVertices)(-1)
       val weights              = new Array[Int](numVertices)
       val arrivedFrom          = new Array[Int](numVertices)
@@ -120,7 +148,7 @@ class Graph(numVertices: Int) {
       /*
       get leaves
        */
-      val leaves = calcLeaves(shortestPathNodeList)
+      val leaves = calcLeaves(shortestPathNodeList, communities(s))
 
       /*
       assign edge betweenness scores to all the edges comprising of the leaves
@@ -129,7 +157,7 @@ class Graph(numVertices: Int) {
         val nbrs = graph(leaf)
         nbrs foreach { n =>
           n.betweenness = weights(n.node).toDouble / weights(leaf).toDouble
-          graph(n.node).filter(_.node == leaf).head.betweenness = n.betweenness
+          graph(n.node).filter(_.node == leaf).headOption.map(_.betweenness = n.betweenness)
         }
       }
 
@@ -140,12 +168,15 @@ class Graph(numVertices: Int) {
        */
       def addBetweenness(l: Int) {
         if (l != s) {
-          val target = graph(l).filter(e => distance(e.node) < distance(l)).head
-          if (target.node != s) {
-            target.betweenness = (1.0 + graph(l).filter(e => distance(e.node) > distance(l)).foldRight(0.0)(_.betweenness + _)) *
-                (weights(l) / weights(target.node))
-            graph(target.node).filter(_.node == l).head.betweenness = target.betweenness
-            addBetweenness(target.node)
+          //          println(graph(l))
+          graph(l).filter(e => distance(e.node) < distance(l)).headOption.map { target =>
+            if (target.node != s) {
+              target.betweenness = 1.0 + graph(l).filter(_.node != target.node ).foldRight(0.0) { (e, a) =>
+                (e.betweenness * (weights(l).toDouble / weights(target.node).toDouble)) + a
+              }
+              graph(target.node).filter(_.node == l).headOption.map(_.betweenness = target.betweenness)
+              addBetweenness(target.node)
+            }
           }
         }
       }
@@ -160,22 +191,37 @@ class Graph(numVertices: Int) {
         }
       }
 
-    /*
-    Add contribution to edge betweenness from this source in the accumulator
-     */
-      (acc zip graph) foreach { case(ael, el) =>
-        (ael zip el) foreach { case (e1, e2) =>
-          e1.betweenness += e2.betweenness
+      /*
+      Add contribution to edge betweenness from this source in the accumulator
+       */
+      def addContrib = {
+        nodes foreach { n =>
+          (acc(n) zip graph(n)) foreach { case(e1, e2) =>
+            e1.betweenness += e2.betweenness
+            maxBetweenness = if (maxBetweenness._2.betweenness > e1.betweenness) maxBetweenness else (n, e1)
+          }
         }
       }
 
-    /*
-    Reset graph for next calculation with a different node as the source.
-     */
-      graph map (el => el map (n => n.betweenness = 0.0))
-
+      addContrib
+      /*
+      Reset graph for next calculation with a different node as the source.
+       */
+      graph foreach (el => el foreach (n => n.betweenness = 0.0))
     }
 
-    acc
+    var i = numVertices
+    acc foreach { ael =>
+      ael foreach { e =>
+        i += 1
+        mean = ((mean * (i - 1)) + e.betweenness) / i
+      }
+    }
+
+//          acc.zipWithIndex foreach {case(el, i) => println(s"$i -> $el") }
+
+      //    (betMaxList, betMinList, median)
+
+    (maxBetweenness, mean)
   }
 }

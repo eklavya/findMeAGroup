@@ -70,7 +70,7 @@ class GraphSpec extends FlatSpec with ShouldMatchers {
 
     val shortestPathNodeList = graph.calcShortestPathTree(0, distance, weights, arrivedFrom)
 
-    graph.calcLeaves(shortestPathNodeList) should be(ArrayBuffer(4, 5, 8, 11, 12))
+    graph.calcLeaves(shortestPathNodeList, 0) should be(ArrayBuffer(4, 5, 8, 11, 12))
   }
 
 }

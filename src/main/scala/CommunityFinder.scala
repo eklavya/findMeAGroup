@@ -1,5 +1,5 @@
 object CommunityFinder extends App {
-  val inputEdges = io.Source.fromFile("/home/eklavya/IdeaProjects/findMeAGroup/src/test/resources/graph").getLines.toList
+  val inputEdges = io.Source.fromFile("/home/eklavya/mediumG.txt").getLines.toList
 
   val numVertices = inputEdges.flatMap(_.split(",")).distinct.size
 
@@ -12,11 +12,6 @@ object CommunityFinder extends App {
     graph
   }
 
-  val res = graph.calcBetweenness
-
-  for(i <- 0 until numVertices) {
-    res(i).foreach { n =>
-      println(s"Betweenness of edge $i, ${n.node} = ${n.betweenness}")
-    }
-  }
+  graph.findCommunities
+  graph.printCommunities
 }
