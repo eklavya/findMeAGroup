@@ -55,13 +55,6 @@ class Graph(num: Int) extends Communities {
   }
 
   /*
-  Mark connected components or communities in the graph
-   */
-
-
-
-
-  /*
   When we arrive from a node i at a node j which has already been visited and distance(i) + 1 == distance(j)
    it means that i provides another shortest path to this node and we add it to a list shortestPathNodeList
 
@@ -115,12 +108,6 @@ class Graph(num: Int) extends Communities {
     }
 
     leaves
-  }
-
-  def sgn(d1: Double, d2: Double) = {
-    if (d1 - d2 < 0.000001 || d2 - d1 < 0.000001) 0
-    else if (d1 - d2 > 0.0) 1
-    else -1
   }
 
   def calcBetweenness(nodes: Seq[Int]) = {
@@ -210,17 +197,7 @@ class Graph(num: Int) extends Communities {
       graph foreach (el => el foreach (n => n.betweenness = 0.0))
     }
 
-    var i = numVertices
-    acc foreach { ael =>
-      ael foreach { e =>
-        i += 1
-        mean = ((mean * (i - 1)) + e.betweenness) / i
-      }
-    }
-
-//          acc.zipWithIndex foreach {case(el, i) => println(s"$i -> $el") }
-
-      //    (betMaxList, betMinList, median)
+    mean = nodes.flatMap(acc(_)).map(_.betweenness).foldRight(0.0)(_ + _) / nodes.length
 
     (maxBetweenness, mean)
   }
