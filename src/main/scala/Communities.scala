@@ -82,7 +82,11 @@ trait Communities {
     if (count > 0) {
 
       (0 until count) foreach { i =>
-        comMap = comMap.updated(i, calcBetweenness(communities.indices.filter(communities(_) == i)))
+        val nodes = communities.indices.filter(communities(_) == i)
+        val accs = nodes.groupBy(_ % 4).values.par.map(calcBetweenness(_))
+        val max = accs.foldRight(accs.head)((a, ac) => if (a._1._2.betweenness > ac._1._2.betweenness) a else ac)
+        val mean = accs.foldRight(0.0)((m, mc) => m._2 + mc) / accs.size
+        comMap = comMap.updated(i, (max._1, mean))
       }
 
       comMap.foreach { case(i, (max, median)) =>
@@ -90,7 +94,7 @@ trait Communities {
       }
 
       comMap.foreach { case(i, (max, median)) =>
-          if ((max._2.betweenness/median) < 1.1) {
+          if ((max._2.betweenness/median) < 2.0) {
             markFound(i)
           } else if (max._1 > -1) {
             val j = max._1

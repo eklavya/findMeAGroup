@@ -54,14 +54,7 @@ class Graph(num: Int) extends Communities {
     acc(v2) = Neighbour(v1, 0.0) :: acc(v2)
   }
 
-  /*
-  Mark connected components or communities in the graph
-   */
-
-
-
-
-  /*
+ /*
   When we arrive from a node i at a node j which has already been visited and distance(i) + 1 == distance(j)
    it means that i provides another shortest path to this node and we add it to a list shortestPathNodeList
 
@@ -104,8 +97,10 @@ class Graph(num: Int) extends Communities {
     shortestPathNodeList
   }
 
-
-
+  /*
+    Find every “leaf” vertex t, i.e., a vertex such that no paths from s to other vertices go though t.
+    Ensure that leaves only in the current connected component are returned.
+  */
   def calcLeaves(shortestPathNodeList: Array[List[Int]], community: Int) = {
     val leaves = new ArrayBuffer[Int]
 
@@ -117,17 +112,22 @@ class Graph(num: Int) extends Communities {
     leaves
   }
 
-  def sgn(d1: Double, d2: Double) = {
-    if (d1 - d2 < 0.000001 || d2 - d1 < 0.000001) 0
-    else if (d1 - d2 > 0.0) 1
-    else -1
-  }
-
+  /*
+  Calculate current edge betweenness for this connected component.
+   */
   def calcBetweenness(nodes: Seq[Int]) = {
 
-    acc foreach (el => el foreach (n => n.betweenness = 0.0))
-    graph foreach (el => el foreach (n => n.betweenness = 0.0))
-    
+    val g = Array.fill[List[Neighbour]](numVertices)(List[Neighbour]())
+
+    val a = Array.fill[List[Neighbour]](numVertices)(List[Neighbour]())
+
+    graph.zipWithIndex foreach { case (el, i) =>
+      el foreach { n =>
+        g(i) = Neighbour(n.node, 0.0) :: g(i)
+        a(i) = Neighbour(n.node, 0.0) :: a(i)
+      }
+    }
+
     var maxBetweenness: (Int, Neighbour) = (-1, Neighbour(0, 0.0))
 
     var mean: Double = 0.1
@@ -154,10 +154,10 @@ class Graph(num: Int) extends Communities {
       assign edge betweenness scores to all the edges comprising of the leaves
        */
       leaves foreach { leaf =>
-        val nbrs = graph(leaf)
+        val nbrs = g(leaf)
         nbrs foreach { n =>
           n.betweenness = weights(n.node).toDouble / weights(leaf).toDouble
-          graph(n.node).filter(_.node == leaf).headOption.map(_.betweenness = n.betweenness)
+          g(n.node).filter(_.node == leaf).headOption.map(_.betweenness = n.betweenness)
         }
       }
 
@@ -169,12 +169,12 @@ class Graph(num: Int) extends Communities {
       def addBetweenness(l: Int) {
         if (l != s) {
           //          println(graph(l))
-          graph(l).filter(e => distance(e.node) < distance(l)).headOption.map { target =>
+          g(l).filter(e => distance(e.node) < distance(l)).headOption.map { target =>
             if (target.node != s) {
-              target.betweenness = 1.0 + graph(l).filter(_.node != target.node ).foldRight(0.0) { (e, a) =>
+              target.betweenness = 1.0 + g(l).filter(_.node != target.node ).foldRight(0.0) { (e, a) =>
                 (e.betweenness * (weights(l).toDouble / weights(target.node).toDouble)) + a
               }
-              graph(target.node).filter(_.node == l).headOption.map(_.betweenness = target.betweenness)
+              g(target.node).filter(_.node == l).headOption.map(_.betweenness = target.betweenness)
               addBetweenness(target.node)
             }
           }
@@ -185,7 +185,7 @@ class Graph(num: Int) extends Communities {
       walk up from all the neighbours of leaves
        */
       leaves foreach { leaf =>
-        val nbrs = graph(leaf)
+        val nbrs = g(leaf)
         nbrs foreach { n =>
           addBetweenness(n.node)
         }
@@ -196,7 +196,7 @@ class Graph(num: Int) extends Communities {
        */
       def addContrib = {
         nodes foreach { n =>
-          (acc(n) zip graph(n)) foreach { case(e1, e2) =>
+          (a(n) zip g(n)) foreach { case(e1, e2) =>
             e1.betweenness += e2.betweenness
             maxBetweenness = if (maxBetweenness._2.betweenness > e1.betweenness) maxBetweenness else (n, e1)
           }
@@ -207,16 +207,10 @@ class Graph(num: Int) extends Communities {
       /*
       Reset graph for next calculation with a different node as the source.
        */
-      graph foreach (el => el foreach (n => n.betweenness = 0.0))
+      g foreach (el => el foreach (n => n.betweenness = 0.0))
     }
 
-    var i = numVertices
-    acc foreach { ael =>
-      ael foreach { e =>
-        i += 1
-        mean = ((mean * (i - 1)) + e.betweenness) / i
-      }
-    }
+    mean = nodes.flatMap(a(_)).map(_.betweenness).foldRight(0.0)(_ + _) / nodes.length
 
 //          acc.zipWithIndex foreach {case(el, i) => println(s"$i -> $el") }
 
