@@ -104,7 +104,7 @@ class Graph(num: Int) extends Communities {
   def calcLeaves(shortestPathNodeList: Array[List[Int]], community: Int) = {
     val leaves = new ArrayBuffer[Int]
 
-    shortestPathNodeList.indices foreach { i =>
+    shortestPathNodeList.indices.foreach { i =>
       if (shortestPathNodeList.filter(_.contains(i)).isEmpty && communities(i) == community)
         leaves += i
     }
@@ -121,7 +121,7 @@ class Graph(num: Int) extends Communities {
 
     val a = Array.fill[List[Neighbour]](numVertices)(List[Neighbour]())
 
-    graph.zipWithIndex foreach { case (el, i) =>
+    graph.zipWithIndex.par.foreach { case (el, i) =>
       el foreach { n =>
         g(i) = Neighbour(n.node, 0.0) :: g(i)
         a(i) = Neighbour(n.node, 0.0) :: a(i)
@@ -153,9 +153,9 @@ class Graph(num: Int) extends Communities {
       /*
       assign edge betweenness scores to all the edges comprising of the leaves
        */
-      leaves foreach { leaf =>
+      leaves.foreach { leaf =>
         val nbrs = g(leaf)
-        nbrs foreach { n =>
+        nbrs.foreach { n =>
           n.betweenness = weights(n.node).toDouble / weights(leaf).toDouble
           g(n.node).filter(_.node == leaf).headOption.map(_.betweenness = n.betweenness)
         }
@@ -184,9 +184,9 @@ class Graph(num: Int) extends Communities {
       /*
       walk up from all the neighbours of leaves
        */
-      leaves foreach { leaf =>
+      leaves.foreach { leaf =>
         val nbrs = g(leaf)
-        nbrs foreach { n =>
+        nbrs.foreach { n =>
           addBetweenness(n.node)
         }
       }
@@ -195,7 +195,7 @@ class Graph(num: Int) extends Communities {
       Add contribution to edge betweenness from this source in the accumulator
        */
       def addContrib = {
-        nodes foreach { n =>
+        nodes.foreach { n =>
           (a(n) zip g(n)) foreach { case(e1, e2) =>
             e1.betweenness += e2.betweenness
             maxBetweenness = if (maxBetweenness._2.betweenness > e1.betweenness) maxBetweenness else (n, e1)
@@ -207,7 +207,7 @@ class Graph(num: Int) extends Communities {
       /*
       Reset graph for next calculation with a different node as the source.
        */
-      g foreach (el => el foreach (n => n.betweenness = 0.0))
+      g.par.foreach (el => el foreach (n => n.betweenness = 0.0))
     }
 
     mean = nodes.flatMap(a(_)).map(_.betweenness).foldRight(0.0)(_ + _) / nodes.length

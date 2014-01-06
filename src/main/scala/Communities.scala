@@ -46,20 +46,20 @@ trait Communities {
     only mark if they are not a found community, this helps by removing the need to recalculate
     max and min betweenness lists for already found communities
      */
-    (0 until numVertices) foreach { i => if (communities(i) > -1) communities(i) = -1 }
+    (0 until numVertices).par.foreach { i => if (communities(i) > -1) communities(i) = -1 }
 
     var count = 0
 
     def dfsTraverse(v: Int) {
       communities(v) = count
-      graph(v) foreach { n =>
+      graph(v).foreach { n =>
         if (communities(n.node) == -1) {
           dfsTraverse(n.node)
         }
       }
     }
 
-    (0 until numVertices) foreach { v =>
+    (0 until numVertices).foreach { v =>
       if (communities(v) == -1) {
         dfsTraverse(v)
         count += 1
@@ -81,7 +81,7 @@ trait Communities {
 
     if (count > 0) {
 
-      (0 until count) foreach { i =>
+      (0 until count).par.foreach { i =>
         val nodes = communities.indices.filter(communities(_) == i)
         val accs = nodes.groupBy(_ % 4).values.par.map(calcBetweenness(_))
         val max = accs.foldRight(accs.head)((a, ac) => if (a._1._2.betweenness > ac._1._2.betweenness) a else ac)
@@ -93,7 +93,7 @@ trait Communities {
         println(s"for community $i max ${max._2.betweenness}, mean $mean coeff ${max._2.betweenness / mean}")
       }
 
-      comMap.foreach { case(i, (max, mean)) =>
+      comMap.par.foreach { case(i, (max, mean)) =>
           if ((max._2.betweenness/mean) < 2.0) {
             markFound(i)
           } else if (max._1 > -1) {
