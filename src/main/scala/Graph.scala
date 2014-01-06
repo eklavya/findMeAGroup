@@ -114,7 +114,7 @@ class Graph(num: Int) extends Communities {
 
     acc foreach (el => el foreach (n => n.betweenness = 0.0))
     graph foreach (el => el foreach (n => n.betweenness = 0.0))
-    
+
     var maxBetweenness: (Int, Neighbour) = (-1, Neighbour(0, 0.0))
 
     var mean: Double = 0.1
