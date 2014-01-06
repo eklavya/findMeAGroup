@@ -90,7 +90,7 @@ trait Communities {
       }
 
       comMap.foreach { case(i, (max, median)) =>
-          if ((max._2.betweenness/median) < 1.1) {
+          if ((max._2.betweenness/median) < 2.0) {
             markFound(i)
           } else if (max._1 > -1) {
             val j = max._1
