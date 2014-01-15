@@ -34,6 +34,7 @@ b)calculate edge betweenness contribution from this set of paths
 
 
 case class Neighbour(node: Int, var betweenness: Double)
+case class MaxBetweenness(node: Int, nbr: Neighbour)
 
 class Graph(num: Int) extends Communities {
 
@@ -54,15 +55,15 @@ class Graph(num: Int) extends Communities {
     acc(v2) = Neighbour(v1, 0.0) :: acc(v2)
   }
 
- /*
-  When we arrive from a node i at a node j which has already been visited and distance(i) + 1 == distance(j)
-   it means that i provides another shortest path to this node and we add it to a list shortestPathNodeList
+  /*
+   When we arrive from a node i at a node j which has already been visited and distance(i) + 1 == distance(j)
+    it means that i provides another shortest path to this node and we add it to a list shortestPathNodeList
 
-   Note: We can get away with just a listing of all the nodes which fall on any shortest path to a node
-         because we only need to know if they fall on a shortest path of any node to decide whether they are a leaf
-         or not, we do not use shortest paths for any other purpose.
-   */
-  def calcShortestPathTree(source: Int, distance: Array[Int], weights: Array[Int], arrivedFrom: Array[Int]) = {
+    Note: We can get away with just a listing of all the nodes which fall on any shortest path to a node
+          because we only need to know if they fall on a shortest path of any node to decide whether they are a leaf
+          or not, we do not use shortest paths for any other purpose.
+    */
+  def calcShortestPathTree(g: Array[List[Neighbour]], source: Int, distance: Array[Int], weights: Array[Int], arrivedFrom: Array[Int]) = {
 
     val bfsq        = mutable.Queue.empty[Int]
     val shortestPathNodeList = Array.fill[List[Int]](numVertices)(List[Int]())
@@ -71,7 +72,7 @@ class Graph(num: Int) extends Communities {
     def bfsTraverse {
       if (! bfsq.isEmpty) {
         val node = bfsq.dequeue
-        val neighbours = graph(node)
+        val neighbours = g(node)
         neighbours.foreach { n =>
           val j = n.node
           if (distance(j) == -1) {
@@ -128,10 +129,6 @@ class Graph(num: Int) extends Communities {
       }
     }
 
-    var maxBetweenness: (Int, Neighbour) = (-1, Neighbour(0, 0.0))
-
-    var mean: Double = 0.1
-
     nodes foreach { s =>
       val distance             = Array.fill[Int](numVertices)(-1)
       val weights              = new Array[Int](numVertices)
@@ -143,20 +140,26 @@ class Graph(num: Int) extends Communities {
       /*
       Find shortest path to all vertices from s
        */
-      val shortestPathNodeList = calcShortestPathTree(s, distance, weights, arrivedFrom)
+      val shortestPathNodeList = calcShortestPathTree(g, s, distance, weights, arrivedFrom)
+      //      println("Shortest path node list")
+      //      shortestPathNodeList foreach println
 
       /*
       get leaves
        */
       val leaves = calcLeaves(shortestPathNodeList, communities(s))
-
+      //      println(s"leaves are $leaves")
+      //      leaves foreach println
       /*
       assign edge betweenness scores to all the edges comprising of the leaves
        */
       leaves.foreach { leaf =>
+      //        println(s"for leaf $leaf neighbours are")
         val nbrs = g(leaf)
         nbrs.foreach { n =>
           n.betweenness = weights(n.node).toDouble / weights(leaf).toDouble
+          //          println(s"neighbour $n  betweenness set to ${n.betweenness}")
+          assert(!n.betweenness.isNaN)
           g(n.node).filter(_.node == leaf).headOption.map(_.betweenness = n.betweenness)
         }
       }
@@ -174,6 +177,8 @@ class Graph(num: Int) extends Communities {
               target.betweenness = 1.0 + g(l).filter(_.node != target.node ).foldRight(0.0) { (e, a) =>
                 (e.betweenness * (weights(l).toDouble / weights(target.node).toDouble)) + a
               }
+              //              println(s"target is $target  set betweenness to ${target.betweenness}")
+              assert(!target.betweenness.isNaN)
               g(target.node).filter(_.node == l).headOption.map(_.betweenness = target.betweenness)
               addBetweenness(target.node)
             }
@@ -184,9 +189,12 @@ class Graph(num: Int) extends Communities {
       /*
       walk up from all the neighbours of leaves
        */
+      //      println("Walking up the tree.")
       leaves.foreach { leaf =>
+      //        println(s"For leaf $leaf add score to neighbours")
         val nbrs = g(leaf)
         nbrs.foreach { n =>
+        //          println(s"for neighbour $n")
           addBetweenness(n.node)
         }
       }
@@ -195,10 +203,12 @@ class Graph(num: Int) extends Communities {
       Add contribution to edge betweenness from this source in the accumulator
        */
       def addContrib = {
-        nodes.foreach { n =>
+        a.indices foreach { n =>
           (a(n) zip g(n)) foreach { case(e1, e2) =>
+            //            println(s"for node $n edges $e1 and $e2")
+            assert(!e2.betweenness.isNaN)
             e1.betweenness += e2.betweenness
-            maxBetweenness = if (maxBetweenness._2.betweenness > e1.betweenness) maxBetweenness else (n, e1)
+            //            maxBetweenness = if (maxBetweenness.nbr.betweenness > e1.betweenness) maxBetweenness else MaxBetweenness(n, e1)
           }
         }
       }
@@ -210,12 +220,13 @@ class Graph(num: Int) extends Communities {
       g.par.foreach (el => el foreach (n => n.betweenness = 0.0))
     }
 
-    mean = nodes.flatMap(a(_)).map(_.betweenness).foldRight(0.0)(_ + _) / nodes.length
+    //    mean = nodes.flatMap(a(_)).map(_.betweenness).foldRight(0.0)(_ + _) / nodes.length
 
-//          acc.zipWithIndex foreach {case(el, i) => println(s"$i -> $el") }
+    //          acc.zipWithIndex foreach {case(el, i) => println(s"$i -> $el") }
 
-      //    (betMaxList, betMinList, median)
+    //    (betMaxList, betMinList, median)
 
-    (maxBetweenness, mean)
+    //    (maxBetweenness, mean)
+    a
   }
 }

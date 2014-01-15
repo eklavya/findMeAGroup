@@ -1,10 +1,19 @@
+import akka.actor.ActorSelection
+import akka.pattern.ask
+import akka.util.Timeout
+import com.typesafe.config.ConfigFactory
 import scala.annotation.tailrec
-import scala.collection.mutable
-import scala.collection.mutable.ArrayBuffer
+import scala.concurrent.{ExecutionContext, Await, Future}
+import scala.concurrent.duration._
+import scala.collection.mutable.Set
+import ExecutionContext.Implicits.global
 
 /**
  * Created by eklavya on 13/12/13.
  */
+
+case class Calc(nodes: Seq[Int])
+case class ResultArray(acc: Array[List[Neighbour]])
 
 trait Communities {
 
@@ -13,12 +22,12 @@ trait Communities {
   val graph: Array[List[Neighbour]]
   val acc: Array[List[Neighbour]]
 
-  def calcBetweenness(nodes: Seq[Int]): ((Int, Neighbour), Double)
+  def calcBetweenness(nodes: Seq[Int]): Array[List[Neighbour]]
 
   private[this] var foundId = -2
 
-  private[this] var comMap = Map.empty[Int, ((Int, Neighbour), Double)]
-  private[this] var finalMap = Map.empty[Int, ((Int, Neighbour), Double)]
+  private[this] var comMap = Map.empty[Int, (MaxBetweenness, Double)]
+  private[this] var finalMap = Map.empty[Int, (MaxBetweenness, Double)]
 
   def getFoundId = {
     foundId -= 1
@@ -71,9 +80,13 @@ trait Communities {
   }
 
   @tailrec
-  final def findCommunities {
+  final def findCommunities(processors: Set[ActorSelection]) {
 
-    comMap = Map.empty[Int, ((Int, Neighbour), Double)]
+    implicit val timeout = Timeout(Duration(ConfigFactory.load.getLong("processors.ask.timeout"), SECONDS))
+
+    val resultTimeout = Duration(ConfigFactory.load.getLong("result.accumulation.timeout"), SECONDS)
+
+    comMap = Map.empty[Int, (MaxBetweenness, Double)]
 
     val count = markCommunities
 
@@ -81,31 +94,56 @@ trait Communities {
 
     if (count > 0) {
 
-      (0 until count).par.foreach { i =>
+      (0 until count).foreach { i =>
         val nodes = communities.indices.filter(communities(_) == i)
-        val accs = nodes.groupBy(_ % 4).values.par.map(calcBetweenness(_))
-        val max = accs.foldRight(accs.head)((a, ac) => if (a._1._2.betweenness > ac._1._2.betweenness) a else ac)
-        val mean = accs.foldRight(0.0)((m, ma) => m._2 + ma) / accs.size
-        comMap = comMap.updated(i, (max._1, mean))
+        val accs = (processors zip nodes.groupBy(_ % processors.size).values) map { case(m, ns) =>
+          (m ? Calc(ns)).mapTo[ResultArray]
+        }
+
+        var maxBetweenness = MaxBetweenness(-1, Neighbour(0, 0.0))
+
+        val asd = Array.fill[List[Neighbour]](numVertices)(List[Neighbour]())
+
+        graph.zipWithIndex.par.foreach { case (el, i) =>
+          el foreach { n =>
+            asd(i) = Neighbour(n.node, 0.0) :: asd(i)
+          }
+        }
+
+        val resF = Future.fold(accs)(asd) { case(g, a) => asd.indices.foreach { n =>
+          (a.acc(n) zip g(n)) foreach { case(e1, e2) =>
+            e1.betweenness += e2.betweenness
+            maxBetweenness = if (maxBetweenness.nbr.betweenness > e1.betweenness) maxBetweenness else MaxBetweenness(n, e1)
+          }
+        }
+          a.acc
+        }
+
+        val res = Await.result(resF, resultTimeout)
+
+        val v = nodes.flatMap(res(_))
+        val mean = nodes.flatMap(res(_)).map(_.betweenness).foldRight(0.0)(_ + _) / v.length
+        comMap = comMap.updated(i, (MaxBetweenness(maxBetweenness.node, Neighbour(maxBetweenness.nbr.node, maxBetweenness.nbr.betweenness)), mean))
       }
 
       comMap.foreach { case(i, (max, mean)) =>
-        println(s"for community $i max ${max._2.betweenness}, mean $mean coeff ${max._2.betweenness / mean}")
+        println(s"for community $i max ${max.nbr.betweenness}, mean $mean coeff ${max.nbr.betweenness / mean}")
       }
 
-      comMap.par.foreach { case(i, (max, mean)) =>
-          if ((max._2.betweenness/mean) < 2.0) {
-            markFound(i)
-          } else if (max._1 > -1) {
-            val j = max._1
-            val k = max._2.node
-            graph(j) = graph(j).filter(_.node != k)
-            graph(k) = graph(k).filter(_.node != j)
-            acc(j) = acc(j).filter(_.node != k)
-            acc(k) = acc(k).filter(_.node != j)
-          }
+      comMap.foreach { case(i, (max, mean)) =>
+        if ((max.nbr.betweenness/mean) < 1.1) {
+          markFound(i)
+        } else if (max.node > -1) {
+          val j = max.node
+          val k = max.nbr.node
+          processors foreach (_ ! Break(j, k))
+          graph(j) = graph(j).filter(_.node != k)
+          graph(k) = graph(k).filter(_.node != j)
+          acc(j) = acc(j).filter(_.node != k)
+          acc(k) = acc(k).filter(_.node != j)
+        }
       }
-      findCommunities
+      findCommunities(processors)
     }
   }
 }
