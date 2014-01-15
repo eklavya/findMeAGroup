@@ -1,5 +1,7 @@
+import com.typesafe.config.ConfigFactory
+
 object CommunityFinder extends App {
-  val inputEdges = io.Source.fromFile("/home/eklavya/mediumG.txt").getLines.toList
+  val inputEdges = io.Source.fromFile(ConfigFactory.load.getString("graphInput")).getLines.toList
 
   val numVertices = inputEdges.flatMap(_.split(",")).distinct.size
 
