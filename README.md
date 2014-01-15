@@ -1,7 +1,7 @@
 findMeAGroup
 ============
 
-Finding and evaluating community structure in networks using distributed computing on Apache Spark.
+Finding and evaluating community structure in networks using distributed computing with Akka.
 
 This program implements the community finding algorithm described in this paper: 
 
