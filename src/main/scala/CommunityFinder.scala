@@ -1,5 +1,6 @@
 import com.typesafe.config._
 import akka.actor._
+import akka.actor.RootActorPath
 import akka.cluster.Cluster
 import akka.cluster.ClusterEvent._
 import akka.cluster.ClusterEvent.CurrentClusterState
@@ -32,13 +33,14 @@ object CommunityFinder {
 
     // Override the configuration of the port
     // when specified as program argument
-    //    if (args.nonEmpty)
-    System.setProperty("akka.remote.netty.tcp.port", "2551")
+//    if (args.nonEmpty)
+    val conf = ConfigFactory.parseString("akka.remote.netty.tcp.port=2551").
+      withFallback(ConfigFactory.load())
 
     // Create an Akka system
-    val system = ActorSystem("ClusterSystem")
+    val system = ActorSystem("ClusterSystem", conf)
     val clusterListener = system.actorOf(Props[SimpleClusterListener], name = "clusterListener")
-    //    val proc = system.actorOf(Props[Processor], "processor")
+//    val proc = system.actorOf(Props[Processor], "processor")
 
     Cluster(system).subscribe(clusterListener, classOf[ClusterDomainEvent])
 

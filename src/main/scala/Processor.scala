@@ -95,6 +95,7 @@ class Processor extends Actor {
 }
 
 object Processor extends App {
-  val system = ActorSystem("ClusterSystem")
+  val conf = ConfigFactory.parseString("""akka.cluster.roles=["processor"]""").withFallback(ConfigFactory.load())
+  val system = ActorSystem("ClusterSystem", conf)
   val proc = system.actorOf(Props[Processor], "processor")
 }
