@@ -130,8 +130,10 @@ trait Communities {
         println(s"for community $i max ${max.nbr.betweenness}, mean $mean coeff ${max.nbr.betweenness / mean}")
       }
 
+      val coeff = ConfigFactory.load.getDouble("coeff")
+
       comMap.foreach { case(i, (max, mean)) =>
-        if ((max.nbr.betweenness/mean) < 1.1) {
+        if ((max.nbr.betweenness / mean) < coeff) {
           markFound(i)
         } else if (max.node > -1) {
           val j = max.node
