@@ -118,7 +118,7 @@ trait Communities {
 
       val coeff = ConfigFactory.load.getDouble("coeff")
 
-      comMap.par.foreach { case(i, (max, mean)) =>
+      comMap.foreach { case(i, (max, mean)) =>
           if ((max.nbr.betweenness / mean) < coeff) {
             markFound(i)
           } else if (max.node > -1) {
