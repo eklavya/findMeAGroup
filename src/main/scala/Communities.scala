@@ -3,6 +3,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import scala.annotation.tailrec
+import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Await, Future}
 import scala.concurrent.duration._
 import scala.collection.mutable.Set
@@ -60,10 +61,15 @@ trait Communities {
     var count = 0
 
     def dfsTraverse(v: Int) {
-      communities(v) = count
-      graph(v).foreach { n =>
-        if (communities(n.node) == -1) {
-          dfsTraverse(n.node)
+      val s = new mutable.Stack[Int]
+      s.push(v)
+      while(!s.isEmpty) {
+        val i = s.pop
+        communities(i) = count
+        graph(i).foreach { n =>
+          if (communities(n.node) == -1) {
+            s.push(n.node)
+          }
         }
       }
     }

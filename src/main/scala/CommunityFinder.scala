@@ -34,8 +34,7 @@ object CommunityFinder {
     // Override the configuration of the port
     // when specified as program argument
 //    if (args.nonEmpty)
-    val conf = ConfigFactory.parseString("akka.remote.netty.tcp.port=2551").
-      withFallback(ConfigFactory.load())
+    val conf = ConfigFactory.parseString("akka.remote.netty.tcp.port=2551").withFallback(ConfigFactory.load())
 
     // Create an Akka system
     val system = ActorSystem("ClusterSystem", conf)
@@ -46,7 +45,9 @@ object CommunityFinder {
 
     def processors = Await.result(clusterListener ? LiveNodes, 5 seconds).asInstanceOf[Set[ActorSelection]]
 
-    while(processors.size < 1) { Thread.sleep(5000) }
+    val minProcessors = ConfigFactory.load.getInt("minimum-processors")
+
+    while(processors.size < minProcessors) { Thread.sleep(5000) }
     graph.findCommunities(processors)
     graph.printCommunities
   }
