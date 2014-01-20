@@ -160,8 +160,9 @@ class Graph(num: Int) extends Communities {
       that is 1 plus the sum of the scores on the neighboring edges immediately below it (farther from s),
       all multiplied by (weight of l)/(weight of j)
        */
-      def addBetweenness(l: Int) {
-        if (l != s) {
+      def addBetweenness(lv: Int) {
+        var l = lv
+        while (l != s) {
           //          println(graph(l))
           g(l).filter(e => distance(e.node) < distance(l)).headOption.map { target =>
             if (target.node != s) {
@@ -171,8 +172,9 @@ class Graph(num: Int) extends Communities {
               //              println(s"target is $target  set betweenness to ${target.betweenness}")
               assert(!target.betweenness.isNaN)
               g(target.node).filter(_.node == l).headOption.map(_.betweenness = target.betweenness)
-              addBetweenness(target.node)
             }
+
+            l = target.node
           }
         }
       }

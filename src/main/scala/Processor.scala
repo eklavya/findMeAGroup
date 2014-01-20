@@ -37,15 +37,8 @@ class Processor(val graph: Graph) extends Actor {
 
       val f = Future {
         val accs = nodes.groupBy(_ % parFac).values.par.map(graph.calcBetweenness(_))
-        val asd = Array.fill[List[Neighbour]](graph.numVertices)(List[Neighbour]())
 
-        graph.graph.zipWithIndex.par.foreach { case (el, i) =>
-          el foreach { n =>
-            asd(i) = Neighbour(n.node, 0.0) :: asd(i)
-          }
-        }
-
-        accs.foldLeft(asd) { case(a, g) => asd.indices.foreach { n =>
+        accs.tail.foldLeft(accs.head) { case(a, g) => g.indices.foreach { n =>
           (a(n) zip g(n)) foreach { case(e1, e2) =>
             e1.betweenness += e2.betweenness
           }
