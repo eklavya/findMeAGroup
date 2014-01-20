@@ -64,9 +64,8 @@ class Graph(num: Int) extends Communities {
           or not, we do not use shortest paths for any other purpose.
     */
   def calcShortestPathTree(g: Array[List[Neighbour]], source: Int, distance: Array[Int], weights: Array[Int], arrivedFrom: Array[Int]) = {
-
     val bfsq        = mutable.Queue.empty[Int]
-    val shortestPathNodeList = Array.fill[List[Int]](numVertices)(List[Int]())
+    val shortestPathNodeList = Array.fill(numVertices)(-1)
 
     @tailrec
     def bfsTraverse {
@@ -78,13 +77,13 @@ class Graph(num: Int) extends Communities {
           if (distance(j) == -1) {
             bfsq.enqueue(j)
             arrivedFrom(j) = node
-            shortestPathNodeList(j) = node :: shortestPathNodeList(j)
+            shortestPathNodeList(node) = 0
             distance(j) = distance(node) + 1
             weights(j)  = weights(node)
           }
           else if (distance(j) < distance(node) + 1) ()
           else if (distance(j) == distance(node) + 1) {
-            shortestPathNodeList(j) = node :: shortestPathNodeList(j)
+            shortestPathNodeList(node) = 0
             weights(j) += weights(node)
           }
         }
@@ -94,7 +93,6 @@ class Graph(num: Int) extends Communities {
 
     bfsq.enqueue(source)
     bfsTraverse
-
     shortestPathNodeList
   }
 
@@ -102,14 +100,8 @@ class Graph(num: Int) extends Communities {
     Find every “leaf” vertex t, i.e., a vertex such that no paths from s to other vertices go though t.
     Ensure that leaves only in the current connected component are returned.
   */
-  def calcLeaves(shortestPathNodeList: Array[List[Int]], community: Int) = {
-    val leaves = new ArrayBuffer[Int]
-
-    shortestPathNodeList.indices.foreach { i =>
-      if (shortestPathNodeList.filter(_.contains(i)).isEmpty && communities(i) == community)
-        leaves += i
-    }
-
+  def calcLeaves(shortestPathNodeList: Array[Int], community: Int) = {
+    val leaves = shortestPathNodeList.indices.filter(x => communities(x) == community).filter(shortestPathNodeList(_) == -1)
     leaves
   }
 
@@ -163,7 +155,6 @@ class Graph(num: Int) extends Communities {
           g(n.node).filter(_.node == leaf).headOption.map(_.betweenness = n.betweenness)
         }
       }
-
       /*
       from this node walk up to s and modify betweenness for edge between l and the node j (closer to s), assign a score
       that is 1 plus the sum of the scores on the neighboring edges immediately below it (farther from s),
@@ -189,7 +180,6 @@ class Graph(num: Int) extends Communities {
       /*
       walk up from all the neighbours of leaves
        */
-//            println("Walking up the tree.")
       leaves.foreach { leaf =>
       //        println(s"For leaf $leaf add score to neighbours")
         val nbrs = g(leaf)
@@ -198,7 +188,6 @@ class Graph(num: Int) extends Communities {
           addBetweenness(n.node)
         }
       }
-
       /*
       Add contribution to edge betweenness from this source in the accumulator
        */
