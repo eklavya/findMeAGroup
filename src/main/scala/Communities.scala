@@ -52,10 +52,15 @@ trait Communities {
     var count = 0
 
     def dfsTraverse(v: Int) {
-      communities(v) = count
-      graph(v).foreach { n =>
-        if (communities(n.node) == -1) {
-          dfsTraverse(n.node)
+      val s = new mutable.Stack[Int]
+      s.push(v)
+      while(!s.isEmpty) {
+        val i = s.pop
+        communities(i) = count
+        graph(i).foreach { n =>
+          if (communities(n.node) == -1) {
+            s.push(n.node)
+          }
         }
       }
     }
@@ -86,19 +91,11 @@ trait Communities {
 
       (0 until count).par.foreach { i =>
         val nodes = communities.indices.filter(communities(_) == i)
-        val accs = nodes.groupBy(_ % parFac).values.par.map(calcBetweenness(_))
+        val accs = nodes.groupBy(_ % parFac).values.par.map(calcBetweenness(_)).seq
 
         var maxBetweenness = MaxBetweenness(-1, Neighbour(0, 0.0))
 
-        val asd = Array.fill[List[Neighbour]](numVertices)(List[Neighbour]())
-
-        graph.zipWithIndex.par.foreach { case (el, i) =>
-          el foreach { n =>
-            asd(i) = Neighbour(n.node, 0.0) :: asd(i)
-          }
-        }
-
-        val res = accs.fold(asd) { case(g, a) => asd.indices.foreach { n =>
+        val res = accs.tail.fold(accs.head) { case(g, a) => g.indices.foreach { n =>
           (a(n) zip g(n)) foreach { case(e1, e2) =>
             e1.betweenness += e2.betweenness
             maxBetweenness = if (maxBetweenness.nbr.betweenness > e1.betweenness) maxBetweenness else MaxBetweenness(n, e1)

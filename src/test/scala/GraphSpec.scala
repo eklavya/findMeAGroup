@@ -44,7 +44,7 @@ class GraphSpec extends FlatSpec with ShouldMatchers {
     distance(0)     = 0
     weights(0)      = 1
 
-    graph.calcShortestPathTree(0, distance, weights, arrivedFrom)
+    graph.calcShortestPathTree(graph.graph, 0, distance, weights, arrivedFrom)
 
     distance(1)  should be(1)
     distance(2)  should be(1)
@@ -68,7 +68,7 @@ class GraphSpec extends FlatSpec with ShouldMatchers {
     distance(0)     = 0
     weights(0)      = 1
 
-    val shortestPathNodeList = graph.calcShortestPathTree(0, distance, weights, arrivedFrom)
+    val shortestPathNodeList = graph.calcShortestPathTree(graph.graph, 0, distance, weights, arrivedFrom)
 
     graph.calcLeaves(shortestPathNodeList, 0) should be(ArrayBuffer(4, 5, 8, 11, 12))
   }

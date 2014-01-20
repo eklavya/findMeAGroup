@@ -64,9 +64,8 @@ class Graph(num: Int) extends Communities {
          or not, we do not use shortest paths for any other purpose.
    */
   def calcShortestPathTree(g: Array[List[Neighbour]], source: Int, distance: Array[Int], weights: Array[Int], arrivedFrom: Array[Int]) = {
-
     val bfsq        = mutable.Queue.empty[Int]
-    val shortestPathNodeList = Array.fill[List[Int]](numVertices)(List[Int]())
+    val shortestPathNodeList = Array.fill(numVertices)(-1)
 
     @tailrec
     def bfsTraverse {
@@ -78,13 +77,13 @@ class Graph(num: Int) extends Communities {
           if (distance(j) == -1) {
             bfsq.enqueue(j)
             arrivedFrom(j) = node
-            shortestPathNodeList(j) = node :: shortestPathNodeList(j)
+            shortestPathNodeList(node) = 0
             distance(j) = distance(node) + 1
             weights(j)  = weights(node)
           }
           else if (distance(j) < distance(node) + 1) ()
           else if (distance(j) == distance(node) + 1) {
-            shortestPathNodeList(j) = node :: shortestPathNodeList(j)
+            shortestPathNodeList(node) = 0
             weights(j) += weights(node)
           }
         }
@@ -102,13 +101,8 @@ class Graph(num: Int) extends Communities {
     Find every “leaf” vertex t, i.e., a vertex such that no paths from s to other vertices go though t.
     Ensure that leaves only in the current connected component are returned.
   */
-  def calcLeaves(shortestPathNodeList: Array[List[Int]], community: Int) = {
-    val leaves = new ArrayBuffer[Int]
-
-    shortestPathNodeList.indices.foreach { i =>
-      if (shortestPathNodeList.filter(_.contains(i)).isEmpty && communities(i) == community)
-        leaves += i
-    }
+  def calcLeaves(shortestPathNodeList: Array[Int], community: Int) = {
+    val leaves = shortestPathNodeList.indices.filter(x => communities(x) == community).filter(shortestPathNodeList(_) == -1)
 
     leaves
   }
@@ -163,8 +157,9 @@ class Graph(num: Int) extends Communities {
       that is 1 plus the sum of the scores on the neighboring edges immediately below it (farther from s),
       all multiplied by (weight of l)/(weight of j)
        */
-      def addBetweenness(l: Int) {
-        if (l != s) {
+      def addBetweenness(lv: Int) {
+        var l = lv
+        while (l != s) {
           //          println(graph(l))
           g(l).filter(e => distance(e.node) < distance(l)).headOption.map { target =>
             if (target.node != s) {
@@ -172,8 +167,9 @@ class Graph(num: Int) extends Communities {
                 (e.betweenness * (weights(l).toDouble / weights(target.node).toDouble)) + a
               }
               g(target.node).filter(_.node == l).headOption.map(_.betweenness = target.betweenness)
-              addBetweenness(target.node)
             }
+
+            l = target.node
           }
         }
       }
