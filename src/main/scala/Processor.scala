@@ -36,7 +36,7 @@ class Processor(val graph: Graph) extends Actor {
       println("Received work, working...")
 
       val f = Future {
-        val accs = nodes.groupBy(_ % parFac).values.par.map(graph.calcBetweenness(_))
+        val accs = nodes.groupBy(_ % parFac).values.par.map(graph.calcBetweenness(_)).seq
 
         accs.tail.foldLeft(accs.head) { case(a, g) => g.indices.foreach { n =>
           (a(n) zip g(n)) foreach { case(e1, e2) =>

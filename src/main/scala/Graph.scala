@@ -122,6 +122,7 @@ class Graph(num: Int) extends Communities {
     }
 
     nodes foreach { s =>
+      println((new java.util.Date).getTime)
       val distance             = Array.fill[Int](numVertices)(-1)
       val weights              = new Array[Int](numVertices)
       val arrivedFrom          = new Array[Int](numVertices)
@@ -164,18 +165,17 @@ class Graph(num: Int) extends Communities {
         var l = lv
         while (l != s) {
           //          println(graph(l))
-          g(l).filter(e => distance(e.node) < distance(l)).headOption.map { target =>
-            if (target.node != s) {
-              target.betweenness = 1.0 + g(l).filter(_.node != target.node ).foldRight(0.0) { (e, a) =>
-                (e.betweenness * (weights(l).toDouble / weights(target.node).toDouble)) + a
-              }
-              //              println(s"target is $target  set betweenness to ${target.betweenness}")
-              assert(!target.betweenness.isNaN)
-              g(target.node).filter(_.node == l).headOption.map(_.betweenness = target.betweenness)
+          val target = g(l).tail.foldLeft(g(l).head) { (m, e) => if (distance(e.node) < distance(m.node)) e else m }
+          if (target.node != s) {
+            target.betweenness = 1.0 + g(l).filter(_.node != target.node ).foldRight(0.0) { (e, a) =>
+              (e.betweenness * (weights(l).toDouble / weights(target.node).toDouble)) + a
             }
-
-            l = target.node
+            //              println(s"target is $target  set betweenness to ${target.betweenness}")
+            assert(!target.betweenness.isNaN)
+            g(target.node).filter(_.node == l).headOption.map(_.betweenness = target.betweenness)
           }
+
+          l = target.node
         }
       }
 
@@ -209,6 +209,7 @@ class Graph(num: Int) extends Communities {
       Reset graph for next calculation with a different node as the source.
        */
       g.par.foreach (el => el foreach (n => n.betweenness = 0.0))
+      println((new java.util.Date).getTime)
     }
 
     //    mean = nodes.flatMap(a(_)).map(_.betweenness).foldRight(0.0)(_ + _) / nodes.length
