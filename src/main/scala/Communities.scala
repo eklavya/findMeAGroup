@@ -102,9 +102,9 @@ trait Communities {
 
       (0 until count).foreach { i =>
         val nodes = communities.indices.filter(communities(_) == i)
-        val accs = (processors zip nodes.groupBy(_ % processors.size).values) map { case(m, ns) =>
+        val accs = (processors zip nodes.groupBy(_ % processors.size).values).par.map { case(m, ns) =>
           (m ? Calc(ns)).mapTo[ResultArray]
-        }
+        }.seq
 
         var maxBetweenness = MaxBetweenness(-1, Neighbour(0, 0.0))
 

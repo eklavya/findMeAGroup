@@ -1,8 +1,8 @@
 import akka.actor.{Props, ActorSystem, Actor}
 import com.typesafe.config.ConfigFactory
+import java.util.concurrent.Executors
 import scala.collection.mutable
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
  * Created by eklavya on 8/1/14.
@@ -18,6 +18,8 @@ case class Break(v1: Int, v2: Int)
 class Processor(val graph: Graph) extends Actor {
 
   val parFac = ConfigFactory.load.getInt("processor.parFac")
+  val executorService = Executors.newFixedThreadPool(4)
+  val executionContext = ExecutionContext.fromExecutorService(executorService)
 
   def receive = {
 
@@ -32,6 +34,7 @@ class Processor(val graph: Graph) extends Actor {
     case Calc(nodes: Seq[Int]) =>
       val s = sender
       println("Received work, working...")
+
       val f = Future {
         val accs = nodes.groupBy(_ % parFac).values.par.map(graph.calcBetweenness(_))
         val asd = Array.fill[List[Neighbour]](graph.numVertices)(List[Neighbour]())
@@ -49,11 +52,11 @@ class Processor(val graph: Graph) extends Actor {
         }
           a
         }
-      }
-      f onComplete { asd =>
+      }(executionContext)
+      f.onComplete{ asd =>
         println("sending back result")
         s !	ResultArray(asd.get)
-      }
+      }(executionContext)
   }
 }
 

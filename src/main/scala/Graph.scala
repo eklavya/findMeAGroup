@@ -189,7 +189,7 @@ class Graph(num: Int) extends Communities {
       /*
       walk up from all the neighbours of leaves
        */
-      //      println("Walking up the tree.")
+//            println("Walking up the tree.")
       leaves.foreach { leaf =>
       //        println(s"For leaf $leaf add score to neighbours")
         val nbrs = g(leaf)

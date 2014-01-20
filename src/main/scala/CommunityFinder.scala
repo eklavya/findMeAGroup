@@ -6,6 +6,7 @@ import akka.cluster.ClusterEvent._
 import akka.cluster.ClusterEvent.CurrentClusterState
 import akka.cluster.ClusterEvent.MemberUp
 import akka.cluster.ClusterEvent.UnreachableMember
+import akka.remote.{RemotingErrorEvent, RemotingLifecycleEvent}
 import akka.util.Timeout
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -72,6 +73,9 @@ class SimpleClusterListener extends Actor with ActorLogging {
     case MemberRemoved(member, previousStatus) ⇒
       log.info("Member is Removed: {} after {}", member.address, previousStatus)
       processors -= context.actorSelection(RootActorPath(member.address) / "user" / "processor")
+
+    case RemotingErrorEvent(cause) =>
+      log.info(cause.getMessage)
 
     case _: ClusterDomainEvent ⇒ // ignore
 
