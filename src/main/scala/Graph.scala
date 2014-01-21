@@ -165,16 +165,19 @@ class Graph(num: Int) extends Communities {
         var l = lv
 
         while (l != s) {
-          g(l).filter(e => distance(e.node) == distance(arrivedFrom(l))) foreach { target =>
+          val gs = g(l).groupBy(e => distance(e.node) < distance(l))
+          val targets = gs(true)
+          val farther = gs(false)
+          targets foreach { target =>
             if (target.node != s) {
-              target.betweenness = 1.0 + g(l).filter(_.node != target.node).foldRight(0.0) { (e, a) =>
+              target.betweenness = 1.0 + farther.foldRight(0.0) { (e, a) =>
                 (e.betweenness * (weights(l).toDouble / weights(target.node).toDouble)) + a
               }
+              assert(!target.betweenness.isNaN)
               g(target.node).filter(_.node == l).headOption.map(_.betweenness = target.betweenness)
             }
-
-            l = target.node
           }
+          l = arrivedFrom(l)
         }
       }
 
