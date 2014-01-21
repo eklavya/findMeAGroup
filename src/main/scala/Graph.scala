@@ -163,19 +163,18 @@ class Graph(num: Int) extends Communities {
        */
       def addBetweenness(lv: Int) {
         var l = lv
-        while (l != s) {
-          //          println(graph(l))
-          val target = g(l).tail.foldLeft(g(l).head) { (m, e) => if (distance(e.node) < distance(m.node)) e else m }
-          if (target.node != s) {
-            target.betweenness = 1.0 + g(l).filter(_.node != target.node ).foldRight(0.0) { (e, a) =>
-              (e.betweenness * (weights(l).toDouble / weights(target.node).toDouble)) + a
-            }
-            //              println(s"target is $target  set betweenness to ${target.betweenness}")
-            assert(!target.betweenness.isNaN)
-            g(target.node).filter(_.node == l).headOption.map(_.betweenness = target.betweenness)
-          }
 
-          l = target.node
+        while (l != s) {
+          g(l).filter(e => distance(e.node) == distance(arrivedFrom(l))) foreach { target =>
+            if (target.node != s) {
+              target.betweenness = 1.0 + g(l).filter(_.node != target.node).foldRight(0.0) { (e, a) =>
+                (e.betweenness * (weights(l).toDouble / weights(target.node).toDouble)) + a
+              }
+              g(target.node).filter(_.node == l).headOption.map(_.betweenness = target.betweenness)
+            }
+
+            l = target.node
+          }
         }
       }
 
